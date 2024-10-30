@@ -11,12 +11,14 @@ namespace Ui {
 class ClientChatWidget;
 }
 
+class ChatHistory;
+
 class ClientChatWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    explicit ClientChatWidget(QTcpSocket *cleint, QWidget *parent = nullptr);
+    explicit ClientChatWidget(QTcpSocket *cleint, ChatHistory *history = nullptr, QWidget *parent = nullptr);
     void disconnect();
     ~ClientChatWidget();
 private slots:

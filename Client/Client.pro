@@ -12,6 +12,7 @@ SOURCES += \
     ChatItemWidget.cpp \
     ChatProtocol.cpp \
     ClientManager.cpp \
+    MessageCodec.cpp \
     main.cpp \
     mainwindow.cpp
 
@@ -19,6 +20,7 @@ HEADERS += \
     ChatItemWidget.h \
     ChatProtocol.h \
     ClientManager.h \
+    MessageCodec.h \
     mainwindow.h
 
 FORMS += \

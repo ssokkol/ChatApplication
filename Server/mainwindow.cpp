@@ -6,6 +6,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    _history = new ChatHistory(this);
     seupServer();
 }
 
@@ -18,7 +19,7 @@ void MainWindow::newClientConnected(QTcpSocket *client)
 {
     auto id = client->property("id").toInt();
     ui->lstClients->addItem(QString("New Client added: %1").arg(id));
-    auto chatWidget= new ClientChatWidget(client, ui->tbClientsChat);
+    auto chatWidget= new ClientChatWidget(client, _history, ui->tbClientsChat);
     ui->tbClientsChat->addTab(chatWidget, QString("Client (%1)").arg(id));
 
     connect(chatWidget, &ClientChatWidget::clientNameChanged, this, &MainWindow::setClientName);
@@ -85,4 +86,3 @@ void MainWindow::on_tbClientsChat_tabCloseRequested(int index)
     chatWidget->disconnect();
     ui->tbClientsChat->removeTab(index);
 }
-

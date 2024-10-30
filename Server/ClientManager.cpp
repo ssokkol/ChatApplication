@@ -1,6 +1,9 @@
 #include "ClientManager.h"
+#include "ChatHistory.h"
 
+#include <QDateTime>
 #include <QDir>
+#include <QFile>
 
 ClientManager::ClientManager(QHostAddress ip, ushort port, QObject *parent)
     : QObject{parent},
@@ -18,6 +21,11 @@ ClientManager::ClientManager(QTcpSocket *client, QObject *parent)
     setupClient();
 }
 
+void ClientManager::setHistory(ChatHistory *history)
+{
+    _history = history;
+}
+
 void ClientManager::connectToServer()
 {
     _socket->connectToHost(_ip, _port);
@@ -30,17 +38,18 @@ void ClientManager::disconnectFromHost()
 
 void ClientManager::sendMessage(QString message)
 {
-    _socket->write(_protocol.textMessage(message, name()));
+    sendPacket(_protocol.textMessage(message, name()));
+    logMessage(QStringLiteral("Server"), name(), message);
 }
 
 void ClientManager::sendName(QString name)
 {
-    _socket->write(_protocol.setNameMessage(name));
+    sendPacket(_protocol.setNameMessage(name));
 }
 
 void ClientManager::sendStatus(ChatProtocol::Status status)
 {
-    _socket->write(_protocol.setStatusMessage(status));
+    sendPacket(_protocol.setStatusMessage(status));
 }
 
 QString ClientManager::name() const
@@ -53,59 +62,72 @@ QString ClientManager::name() const
 
 void ClientManager::sendIsTyping()
 {
-    _socket->write(_protocol.isTypingMessage());
+    sendPacket(_protocol.isTypingMessage());
 }
 
 
 void ClientManager::sendInitSendingFile(QString fileName)
 {
     _tmpFileName = fileName;
-    _socket->write(_protocol.setInitSendingFileMessage(fileName));
+    sendPacket(_protocol.setInitSendingFileMessage(fileName));
 }
 
 void ClientManager::sendAcceptFile()
 {
-    _socket->write(_protocol.setAcceptFileMessage());
+    sendPacket(_protocol.setAcceptFileMessage());
 }
 
 void ClientManager::sendRejectFile()
 {
-    _socket->write(_protocol.setRejectFileMessage());
+    sendPacket(_protocol.setRejectFileMessage());
 }
 void ClientManager::readyRead()
 {
-    auto data = _socket->readAll();
-    _protocol.loadData(data);
-    switch (_protocol.type()) {
-    case ChatProtocol::Text:
-        emit textMessageReceived(_protocol.message(), _protocol.receiver());
-        break;
-    case ChatProtocol::SetName:{
-        auto prevName = _socket->property("clientName").toString();
-        _socket->setProperty("clientName", name());
-        emit nameChanged(prevName, name());
-        break;
-    }
-    case ChatProtocol::SetStatus:
-        emit statusChanged(_protocol.status());
-        break;
-    case ChatProtocol::IsTyping:
-        emit isTyping();
-        break;
-    case ChatProtocol::InitSendingFile:
-        emit initReceivingFile(_protocol.name(), _protocol.fileName(), _protocol.fileSize());
-        break;
-    case ChatProtocol::AcceptSendingFile:
-        sendFile();
-        break;
-    case ChatProtocol::RejectSendingFile:
-        emit rejectReceivingFile();
-        break;
-    case ChatProtocol::SendFile:
-        saveFile();
-        break;
-    default:
-        break;
+    _recvBuffer.append(_socket->readAll());
+    while (true) {
+        QByteArray plain;
+        auto result = MessageCodec::decodeNext(_recvBuffer, plain);
+        if (result == MessageCodec::DecodeResult::NeedMoreData) {
+            break;
+        }
+        if (result == MessageCodec::DecodeResult::Invalid) {
+            _recvBuffer.clear();
+            break;
+        }
+
+        _protocol.loadData(plain);
+        switch (_protocol.type()) {
+        case ChatProtocol::Text:
+            logMessage(name(), _protocol.receiver(), _protocol.message());
+            emit textMessageReceived(_protocol.message(), _protocol.receiver());
+            break;
+        case ChatProtocol::SetName:{
+            auto prevName = _socket->property("clientName").toString();
+            _socket->setProperty("clientName", name());
+            emit nameChanged(prevName, name());
+            break;
+        }
+        case ChatProtocol::SetStatus:
+            emit statusChanged(_protocol.status());
+            break;
+        case ChatProtocol::IsTyping:
+            emit isTyping();
+            break;
+        case ChatProtocol::InitSendingFile:
+            emit initReceivingFile(_protocol.name(), _protocol.fileName(), _protocol.fileSize());
+            break;
+        case ChatProtocol::AcceptSendingFile:
+            sendFile();
+            break;
+        case ChatProtocol::RejectSendingFile:
+            emit rejectReceivingFile();
+            break;
+        case ChatProtocol::SendFile:
+            saveFile();
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -118,7 +140,7 @@ void ClientManager::setupClient()
 
 void ClientManager::sendFile()
 {
-    _socket->write(_protocol.setFileMessage(_tmpFileName));
+    sendPacket(_protocol.setFileMessage(_tmpFileName));
 }
 
 void ClientManager::saveFile()
@@ -135,3 +157,15 @@ void ClientManager::saveFile()
     }
 }
 
+void ClientManager::sendPacket(const QByteArray &payload)
+{
+    _socket->write(MessageCodec::encode(payload));
+}
+
+void ClientManager::logMessage(const QString &sender, const QString &receiver, const QString &message)
+{
+    if (!_history) {
+        return;
+    }
+    _history->logTextMessage(sender, receiver, message);
+}

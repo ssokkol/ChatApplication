@@ -2,6 +2,7 @@
 #define CLIENTMANAGER_H
 
 #include "ChatProtocol.h"
+#include "MessageCodec.h"
 
 #include <QObject>
 #include <QTcpSocket>
@@ -48,9 +49,11 @@ private: //fields
     ushort _port;
     ChatProtocol _protocol;
     QString _tmpFileName;
+    QByteArray _recvBuffer;
 private: //methods
      void setupClient();
      void sendFile();
+     void sendPacket(const QByteArray &payload);
 };
 
 #endif // CLIENTMANAGER_H

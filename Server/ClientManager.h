@@ -2,6 +2,7 @@
 #define CLIENTMANAGER_H
 
 #include "ChatProtocol.h"
+#include "MessageCodec.h"
 
 #include <QObject>
 #include <QTcpSocket>
@@ -12,6 +13,7 @@ class ClientManager : public QObject
 public:
     explicit ClientManager(QHostAddress ip = QHostAddress::LocalHost, ushort port = 4500, QObject *parent = nullptr);
     explicit ClientManager(QTcpSocket *client, QObject *parent = nullptr);
+    void setHistory(class ChatHistory *history);
 
     void connectToServer();
     void disconnectFromHost();
@@ -47,11 +49,15 @@ private: //fields
     ushort _port;
     ChatProtocol _protocol;
     QString _tmpFileName;
+    QByteArray _recvBuffer;
+    class ChatHistory *_history = nullptr;
 
 private: //methods
      void setupClient();
      void sendFile();
      void saveFile();
+     void sendPacket(const QByteArray &payload);
+     void logMessage(const QString &sender, const QString &receiver, const QString &message);
 };
 
 #endif // CLIENTMANAGER_H

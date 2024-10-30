@@ -4,12 +4,13 @@
 #include <QMessageBox>
 #include <QDesktopServices>
 
-ClientChatWidget::ClientChatWidget(QTcpSocket *client, QWidget *parent) :
+ClientChatWidget::ClientChatWidget(QTcpSocket *client, ChatHistory *history, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ClientChatWidget)
 {
     ui->setupUi(this);
     _client = new ClientManager(client, this);
+    _client->setHistory(history);
 //    connect(_client, &QTcpSocket::readyRead, this, &ClientChatWidget::dataReceived);
     connect(_client, &ClientManager::disconnected, this, &ClientChatWidget::clientDisconnected);
     connect(_client, &ClientManager::textMessageReceived, this, &ClientChatWidget::textMessageReceived);
@@ -93,4 +94,3 @@ void ClientChatWidget::onClientNameChanged(QString prevName, QString name)
     QFile::rename(dir.canonicalPath(), name);
     emit clientNameChanged(prevName, name);
 }
-

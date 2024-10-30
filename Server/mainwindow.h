@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include "ServerManager.h"
 #include "ClientChatWidget.h"
+#include "ChatHistory.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -26,6 +27,7 @@ private slots:
 private: //fields
     Ui::MainWindow *ui;
     ServerManager *_server;
+    ChatHistory *_history;
 private: //methods
     void seupServer();
 };

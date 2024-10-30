@@ -12,6 +12,8 @@ SOURCES += \
     ChatProtocol.cpp \
     ClientChatWidget.cpp \
     ClientManager.cpp \
+    ChatHistory.cpp \
+    MessageCodec.cpp \
     ServerManager.cpp \
     main.cpp \
     mainwindow.cpp
@@ -20,6 +22,8 @@ HEADERS += \
     ChatProtocol.h \
     ClientChatWidget.h \
     ClientManager.h \
+    ChatHistory.h \
+    MessageCodec.h \
     ServerManager.h \
     mainwindow.h
 

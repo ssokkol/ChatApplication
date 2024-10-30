@@ -1,4 +1,5 @@
 #include "ServerManager.h"
+#include "MessageCodec.h"
 
 ServerManager::ServerManager(ushort port, QObject *parent)
     : QObject{parent}
@@ -12,7 +13,7 @@ void ServerManager::notifyOtherClients(QString prevName, QString name)
     foreach (auto cl, _clients) {
         auto clientName = cl->property("clientName").toString();
         if (clientName != name) {
-            cl->write(message);
+            cl->write(MessageCodec::encode(message));
         }
     }
 }
@@ -24,14 +25,14 @@ void ServerManager::onTextForOtherClients(QString message, QString receiver, QSt
         foreach (auto cl, _clients) {
             auto clientName = cl->property("clientName").toString();
             if (clientName != sender) {
-                cl->write(msg);
+                cl->write(MessageCodec::encode(msg));
             }
         }
     } else {
         foreach (auto cl, _clients) {
             auto clientName = cl->property("clientName").toString();
             if (clientName == receiver) {
-                cl->write(msg);
+                cl->write(MessageCodec::encode(msg));
                 return;
             }
         }
@@ -52,11 +53,11 @@ void ServerManager::newClientConnectionReceived()
 
     if (id > 1) {
         auto message = _protocol.setConnectionACKMessage(clientName, _clients.keys());
-        client->write(message);
+        client->write(MessageCodec::encode(message));
 
         auto newClientMessage = _protocol.setNewClientMessage(clientName);
         foreach (auto cl, _clients) {
-            cl->write(newClientMessage);
+            cl->write(MessageCodec::encode(newClientMessage));
         }
     }
     _clients[clientName] = client;
@@ -69,7 +70,7 @@ void ServerManager::onClientDisconnected()
     _clients.remove(clientName);
     auto message = _protocol.setClinetDisconnectedMessage(clientName);
     foreach (auto cl, _clients) {
-        cl->write(message);
+        cl->write(MessageCodec::encode(message));
     }
 
     emit clientDisconnected(client);
